@@ -8,9 +8,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class XMLParser  {
@@ -19,7 +17,7 @@ public class XMLParser  {
     // массу запроса, оригинальынй запрос
     public static ArrayList<String> senceArray = new ArrayList<>();
     public static ArrayList<VSData> vsDataArray = new ArrayList<>();
-    public static void xmlParser (File file) throws ParserConfigurationException, SAXException , IOException {
+    public static ArrayList<VSData> xmlParser (File file) throws ParserConfigurationException, SAXException , IOException {
 
         SAXParserFactory factory = SAXParserFactory.newInstance();
         SAXParser parser = factory.newSAXParser();
@@ -27,41 +25,15 @@ public class XMLParser  {
         //парсим наш хмл-файл
         //методом parse заполняется массив senceArray строками результата запроса
         XMLHandler xmlHandler = new XMLHandler();
+        System.out.println("Парсим xml-файл...");
         parser.parse(file, xmlHandler);
-        //System.out.println(senceArray);
 
         // заполняем массив данными, полученными из строк результата запроса
+        System.out.println("Добавляем данные из xml-файла в массив...");
         vsDataArray = StringParser(senceArray);
         senceArray.clear();
 
-        //System.out.println(vsDataArray);
-        BDConnection.getConnection(vsDataArray);
-        vsDataArray.clear();
-
-    }
-
-    // метод разбивает строку по разделителю "vs"
-    // получаем из строки первичный запрос, вторичный запрос, массу запроса и оригинальный запрос
-    public static ArrayList<VSData> StringParser (ArrayList<String> arr){
-        ArrayList<VSData> list = new ArrayList<>();
-        int startWeigth = 5;
-
-        for (int i = 0; i < arr.size(); i++) {
-            String string  = arr.get(i);
-            String[] split = string.split(" vs ");
-
-            String a = split[0], b = split[1];
-
-            if (b.length() <= 10 && list.size() < 5) {
-                list.add(new VSData(a, b, startWeigth));
-                startWeigth--;
-            }
-            else {
-                arr.remove(i);
-                i--;
-            }
-        }
-        return list;
+        return vsDataArray;
     }
 
     // создаем вложеный класс, который парсит хмл по елементам suggestion и получает атрибут data в виде строки
@@ -74,7 +46,35 @@ public class XMLParser  {
                 senceArray.add(s);
             }
         }
+    }
 
+    // метод разбивает строку по разделителю "vs"
+    // получаем из строки первичный запрос, вторичный запрос, массу запроса и оригинальный запрос
+    public static ArrayList<VSData> StringParser (ArrayList<String> arr){
+        ArrayList<VSData> list = new ArrayList<>();
+        int startWeigth = 5;
+
+        for (int i = 0; i < arr.size(); i++) {
+            String string  = arr.get(i);
+            try {
+                String[] split = string.split(" vs ");
+                String a = split[0], b = split[1];
+
+                if (b.length() <= 10 && list.size() < 5) {
+                    list.add(new VSData(a, b, startWeigth));
+                    startWeigth--;
+                }
+                else {
+                    arr.remove(i);
+                    i--;
+                }
+            }
+            catch (ArrayIndexOutOfBoundsException e) {
+                arr.remove(i);
+                i--;
+            }
+        }
+        return list;
     }
 }
 
