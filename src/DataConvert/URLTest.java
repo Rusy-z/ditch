@@ -8,7 +8,7 @@ public class URLTest {
     private static HttpURLConnection con;
 
     public static File URLtoXML (String s) throws IOException {
-        s = s.replace("+", "%2B");
+        s = s.replace("\\+", "%2B");
         s = s.replace("#", "%23");
 
         String urlAdress = "http://suggestqueries.google.com/complete/search?&output=toolbar&gl=us&hl=en&q=%3C"+ s +"%20vs%20%3E";
