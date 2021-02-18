@@ -16,7 +16,6 @@ public class XMLParser  {
     // "vsDataArray" - массив объектов типа VSData,который содержит: первичный запрос, вториный запрос,
     // массу запроса, оригинальынй запрос
     public static ArrayList<String> senceArray = new ArrayList<>();
-    public static ArrayList<VSData> vsDataArray = new ArrayList<>();
     public static ArrayList<VSData> xmlParser (File file) throws ParserConfigurationException, SAXException , IOException {
 
         SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -25,15 +24,20 @@ public class XMLParser  {
         //парсим наш хмл-файл
         //методом parse заполняется массив senceArray строками результата запроса
         XMLHandler xmlHandler = new XMLHandler();
-        System.out.println("Парсим xml-файл...");
+        System.out.println("Метод xmlParser: Парсим xml-файл...");
         parser.parse(file, xmlHandler);
 
         // заполняем массив данными, полученными из строк результата запроса
-        System.out.println("Добавляем данные из xml-файла в массив...");
-        vsDataArray = StringParser(senceArray);
+        System.out.println("Метод StringParser: Добавляем данные из xml-файла в массив данных...");
+        ArrayList<VSData> vs;
+        vs = StringParser(senceArray);
+
         senceArray.clear();
 
-        return vsDataArray;
+        System.out.println();
+        System.out.println("Возвращаем массив с данными в метод setQuery: ");
+        System.out.println(vs);
+        return vs;
     }
 
     // создаем вложеный класс, который парсит хмл по елементам suggestion и получает атрибут data в виде строки
@@ -42,8 +46,8 @@ public class XMLParser  {
         @Override
         public void startElement(String uri, String localName, String name, Attributes attributes) {
             if (name.equals("suggestion")) {
-                String s = attributes.getValue("data");
-                senceArray.add(s);
+                String a = attributes.getValue("data");
+                senceArray.add(a);
             }
         }
     }

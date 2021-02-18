@@ -1,5 +1,5 @@
 import DataConvert.BDConnection;
-import DataConvert.URLTest;
+import DataConvert.GoogleQueries;
 import DataConvert.VSData;
 import DataConvert.XMLParser;
 import org.xml.sax.SAXException;
@@ -10,85 +10,72 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class Main {
-    private static String firstRequest;
-    private static ArrayList<VSData> dataForDatabase;
-    private static ArrayList<String> targetInDatabase;
-    private static int requestCount = 0;
-    private static int summaryLayerCount;
+    private static int targetID = 0;
 
     public static void main(String[] args) {
-        System.out.println("Чтение первого запроса и колличества слоев");
-        firstRequest = "Russia";
-        summaryLayerCount = 4;
-
-        VSData.setOriginal_therm(firstRequest);
-
-        System.out.println("Отправляем первый запрос в поисковик из Main...");
-        setRequest(firstRequest);
-        System.out.println("///////////////////////////////////////////////////////////////");
-
-        int startLayerCount = 1;
-        while (summaryLayerCount > 1) {
-
-            System.out.println("Получаем " + (startLayerCount) + " слой запроса" );
-            targetInDatabase = getTargetArray();
-
-            if (targetInDatabase != null) {
-                setNextRequest();
-            }
-            summaryLayerCount--;
-            startLayerCount++;
+        String word = args[0];
+        String count = args[1];
+        int queryCount = 1;
+        try {
+            queryCount = Integer.parseInt(count);
         }
-    }
-        public static void setRequest (String request){
-            try{
-                File xmlFIle = URLTest.URLtoXML(request);
+        catch (ClassFormatError e){ System.out.println(e.getMessage()); }
+        VSData.setOriginal_therm(word);
 
-                System.out.println("Получаем xml-файл...");
-                dataForDatabase = XMLParser.xmlParser(xmlFIle);
-                requestCount = dataForDatabase.size();
+        GoogleQueries googleQueries = new GoogleQueries();
+        BDConnection bdConnection = new BDConnection();
 
-                System.out.println("Создаем соединение с бд и вносим в нее данные из массива данных...");
-                BDConnection.getConnection();
-                BDConnection.InsertRequestForTastTable(dataForDatabase);
-            }
-            catch (SAXException e) {
-                System.out.println("SAXException: " + e.getMessage());
-            }
-            catch (ParserConfigurationException e){
-                System.out.println("ParserConfigurationException: " + e.getMessage());
-            }
-            catch (IOException e){
-                System.out.println("IOException: " + e.getMessage());
-            }
-            finally {
-                System.out.println("Закрываем соединение с бд...");
-                BDConnection.closeConnection();
-                System.out.println("////////////////////////////////////////////////////////////////////////////////");
+        System.out.println("Начльный запрос: " + word);
+        System.out.println(":::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::");
+        setQuery(word, googleQueries, bdConnection);
+
+        int i = 1;
+
+        while (queryCount > 1){
+            System.out.println("Обрабатываем "+ i +" слой вторичных запросов");
+            System.out.println();
+            System.out.println("Main-метод: получаем массив строк со вторичными запросами:");
+            ArrayList<String> array = bdConnection.getTarget(targetID);
+            System.out.println(array);
+            targetID = targetID + array.size();
+            bdConnection.closeConnection();
+            for (String query : array) {
+                System.out.println("Вторичный запрос: " + query);
+                setQuery(query, googleQueries, bdConnection);
                 System.out.println();
             }
+            queryCount--;
+            i++;
+        }
+    }
+
+    public static void setQuery (String query, GoogleQueries googleQueries, BDConnection bdConnection) {
+        String url = googleQueries.getURL(query);
+        File fileFromGoogle = googleQueries.getXmlFile(url);
+        ArrayList<VSData> dataArrayList = null;
+        try {
+            dataArrayList = XMLParser.xmlParser(fileFromGoogle);
+        }
+        catch (SAXException e) {
+            System.out.println(e.getMessage());
+        }
+        catch (ParserConfigurationException e) {
+            System.out.println(e.getMessage());
+        }
+        catch (IOException e) {
+            System.out.println(e.getMessage());
         }
 
-        public static ArrayList<String> getTargetArray(){
-            ArrayList<String> list;
-            try {
-                BDConnection.getConnection();
-                list = BDConnection.getTarget(requestCount);
+        System.out.println("Метод setQuery: отправляем данные из массива в БД...");
+
+        if (dataArrayList != null) {
+            for (VSData data : dataArrayList) {
+                bdConnection.getConnection();
+                bdConnection.InsertRequestForTestTable(data);
+                bdConnection.closeConnection();
             }
-            finally {
-                BDConnection.closeConnection();
-            }
-            return list;
         }
 
-        public static void setNextRequest () {
-            ArrayList<String> array = targetInDatabase;
-            if (array != null) {
-                for (String word : array) {
-                    System.out.println("Поиск по слову: " + word);
-                    setRequest(word);
-                }
-                requestCount = requestCount + array.size();
-            }
-        }
+        System.out.println("////////////////////////////////////////////////////");
+    }
 }
